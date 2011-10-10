@@ -1,6 +1,9 @@
 #include "util.h"
 
 #include <pthread.h>
+#include <signal.h>
+
+int sock_desc;
 
 static void *
 answer (void *data)
@@ -40,6 +43,14 @@ out:
     return NULL;
 }
 
+static void
+close_socket (int signal)
+{
+    printf ("Signal %d received\n", signal);
+    close (sock_desc);
+    exit (0);
+}
+
 int
 main()
 {
@@ -61,9 +72,12 @@ main()
     local_addr.sin_port = htons (serv->s_port);
     printf ("Listening on port: %d\n", ntohs (local_addr.sin_port));
 
-    int sock_desc;
     if ((sock_desc = socket (AF_INET, SOCK_STREAM, 0)) < 0)
         error ("error: couldn't create socket");
+
+    signal (SIGINT, close_socket);
+    signal (SIGKILL, close_socket);
+    signal (SIGTERM, close_socket);
 
     if ((bind(sock_desc, (sockaddr*)(&local_addr), sizeof (local_addr))) < 0)
         error ("error: coudln't bind to socket");
@@ -85,3 +99,4 @@ main()
     close (sock_desc);
     return 0;
 }
+
