@@ -16,6 +16,6 @@ typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
-void error (const char *format, ...);
+void error (const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 #endif /*__UTIL_H__*/
