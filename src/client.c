@@ -28,27 +28,36 @@ main (int argc, char *argv[])
     if ((connect (sock_desc, (sockaddr*)(&local_addr), sizeof (local_addr))) < 0)
         error ("error: couldn't connect to server");
 
-    FILE *in = fopen(argv[2], "r");
-    if (!in)
+    FILE *file = fopen(argv[2], "r");
+    if (!file)
         error ("error: couldn't open file: %s", argv[2]);
 
     char buffer[BUFFER_SIZE + 1];
     buffer[BUFFER_SIZE] = '\0';
-    printf ("Sending:\n");
-    while (fgets (buffer, BUFFER_SIZE, in))
+
+    printf ("Sending.\n");
+
+    if ((write (sock_desc, argv[2], BUFFER_SIZE)) < 0)
+         error ("error: couldn't write to server");
+    while (fgets (buffer, BUFFER_SIZE, file))
     {
-        printf ("%s", buffer);
         if ((write (sock_desc, buffer, BUFFER_SIZE)) < 0)
              error ("error: couldn't write to server");
     }
     if ((write (sock_desc, END_OF_FILE, sizeof (END_OF_FILE) + 1)) < 0)
          error ("error: couldn't write to server");
-    printf ("\nRecieving:\n");
+
+    printf ("Recieving.\n");
+    if (read (sock_desc, buffer, BUFFER_SIZE) <= 0)
+        error ("Failed to recieve filename");
+    file = freopen (buffer, "w", file);
+    if (!file)
+        error ("error: couldn't open file: %s to write", buffer);
+
     while (read (sock_desc, buffer, BUFFER_SIZE) > 0)
-        printf ("%s", buffer);
-    printf ("\n");
+        fprintf (file, "%s", buffer);
 
     close (sock_desc);
-    fclose (in);
+    fclose (file);
     return 0;
 }

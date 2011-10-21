@@ -2,6 +2,11 @@
 
 #include <pthread.h>
 #include <signal.h>
+#include <string.h>
+
+/*
+ * TODO: free memory on error, support files with extension other than mp3 (strlen (extension) != 3)
+ */
 
 int sock_desc;
 
@@ -12,7 +17,13 @@ answer (void *data)
     buffer[BUFFER_SIZE] = '\0';
     const int sock = *((int *)data);
 
-    FILE *file = fopen ("/tmp/__foobar__", "w");
+    /* Read the input file name */
+    if (read (sock, buffer, BUFFER_SIZE) <= 0)
+        error ("Failed to recieve filename");
+    char *filename = strdup (buffer);
+    char *input_file = (char *) malloc ((strlen (filename) + 6) * sizeof (char));
+    sprintf (input_file, "/tmp/%s", filename);
+    FILE *file = fopen (input_file, "w");
     if (!file)
     {
         fprintf (stderr, "couldn't open file for write\n");
@@ -23,22 +34,40 @@ answer (void *data)
             && (strcmp(END_OF_FILE, buffer) != 0))
         fprintf (file, "%s", buffer);
 
-    file = freopen ("/tmp/__foobar__", "r", file);
+    strcpy (filename + strlen (filename) - 3, "ogg");
+    char *output_file = (char *) malloc ((strlen (filename) + 6) * sizeof (char));
+    sprintf (output_file, "/tmp/%s", filename);
+    /*
+     * TODO: ffmpeg -i input_file output_file
+     * new thread + wait ?
+     * remove the 4 following lines
+     */
+    FILE *tmp = fopen (output_file, "w");
+    file = freopen (input_file, "r", file);
+    while (fgets (buffer, BUFFER_SIZE, file) && fprintf (tmp, "%s", buffer));
+    fclose (tmp);
+
+    file = freopen (output_file, "r", file);
     if (!file)
     {
         fprintf (stderr, "couldn't reopen file for read\n");
-        goto out;
+        goto fail;
     }
 
+    if ((write (sock, filename, BUFFER_SIZE)) < 0)
+         error ("error: couldn't write to client");
     while (fgets (buffer, BUFFER_SIZE, file))
     {
         if ((write (sock, buffer, BUFFER_SIZE)) < 0)
              error ("error: couldn't write to client");
     }
-    printf ("\n");
     fclose (file);
 
+fail:
+    free (output_file);
 out:
+    free (input_file);
+    free (filename);
     close (sock);
     return NULL;
 }
@@ -75,7 +104,7 @@ main()
     if ((sock_desc = socket (AF_INET, SOCK_STREAM, 0)) < 0)
         error ("error: couldn't create socket");
 
-    signal (SIGINT, close_socket);
+    signal (SIGINT,  close_socket);
     signal (SIGKILL, close_socket);
     signal (SIGTERM, close_socket);
 
