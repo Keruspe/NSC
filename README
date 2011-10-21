@@ -1,2 +1,2 @@
 launching the server: ./server
-launching the client: ./client 127.0.0.1 toto
+launching the client: ./client 127.0.0.1 toto.mp3
