@@ -49,10 +49,14 @@ answer (void *data)
     ssize_t s;
     while (((s = read (sock, buffer, BUFFER_SIZE)) > 0)
             && (strncmp(END_OF_FILE, buffer, s) != 0))
-        write (fileno(file), buffer, s);
+    {
+        if (write (fileno(file), buffer, s) <= 0)
+            error ("failed to write to client");
+    }
 
     char *output_file = strdup (input_file);
     strcpy (output_file + strlen (output_file) - 3, "mp3");
+    printf ("ffmpeg -i %s %s\n", input_file, output_file);
     char **cmd = (char **) malloc (5 * sizeof (char *));
     cmd[0] = "ffmpeg";
     cmd[1] = "-i";
@@ -62,19 +66,18 @@ answer (void *data)
     exec_bg (cmd);
     free (cmd);
 
-    fclose (file);
-    file = fopen (output_file, "r");
+    file = freopen (output_file, "r", file);
     if (!file)
     {
         fprintf (stderr, "couldn't reopen file for read\n");
         goto err;
     }
 
-    if ((write (sock, filename, BUFFER_SIZE)) < 0)
+    if ((write (sock, filename, BUFFER_SIZE)) <= 0)
          error ("error: couldn't write to client");
-    while ((s = read (fileno (file), buffer, BUFFER_SIZE)))
+    while ((s = read (fileno (file), buffer, BUFFER_SIZE)) > 0)
     {
-        if ((write (sock, buffer, s)) < 0)
+        if ((write (sock, buffer, s)) <= 0)
              error ("error: couldn't write to client");
     }
     fclose (file);

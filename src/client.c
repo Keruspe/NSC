@@ -27,9 +27,6 @@ main (int argc, char *argv[])
     if ((sock_desc = socket (AF_INET, SOCK_STREAM, 0)) < 0)
         error ("error: couldn't create socket to server");
 
-    int s = 1;
-    setsockopt(sock_desc, IPPROTO_TCP, TCP_NODELAY, &s, sizeof(s));
-
     if ((connect (sock_desc, (sockaddr*)(&local_addr), sizeof (local_addr))) < 0)
         error ("error: couldn't connect to server");
 
@@ -42,15 +39,33 @@ main (int argc, char *argv[])
 
     printf ("Sending.\n");
 
-    if ((write (sock_desc, argv[2], BUFFER_SIZE)) < 0)
-         error ("error: couldn't write to server");
+    int state = 1;
+    setsockopt(sock_desc, IPPROTO_TCP, TCP_NODELAY, &state, sizeof(int));
+
+    if ((write (sock_desc, argv[2], BUFFER_SIZE)) <= 0)
+         error ("error: couldn't write filename to server");
+
+    state = 0;
+    setsockopt(sock_desc, IPPROTO_TCP, TCP_NODELAY, &state, sizeof(int));
+    state = 1;
+    setsockopt(sock_desc, IPPROTO_TCP, TCP_CORK, &state, sizeof(int));
+
+    ssize_t s;
     while ((s = read (fileno (file), buffer, BUFFER_SIZE)))
     {
-        if ((write (sock_desc, buffer, s)) < 0)
+        if ((write (sock_desc, buffer, s)) <= 0)
              error ("error: couldn't write to server");
     }
-    if ((write (sock_desc, END_OF_FILE, sizeof (END_OF_FILE) + 1)) < 0)
+
+    state = 0;
+    setsockopt(sock_desc, IPPROTO_TCP, TCP_CORK, &state, sizeof(int));
+    state = 1;
+    setsockopt(sock_desc, IPPROTO_TCP, TCP_NODELAY, &state, sizeof(int));
+
+    if (write (sock_desc, END_OF_FILE, sizeof (END_OF_FILE) + 1) <= 0)
          error ("error: couldn't write to server");
+    else
+        printf ("Sent.\n");
 
     printf ("Recieving.\n");
     if (read (sock_desc, buffer, BUFFER_SIZE) <= 0)
@@ -59,8 +74,11 @@ main (int argc, char *argv[])
     if (!file)
         error ("error: couldn't open file: %s to write", buffer);
 
-    while ((s = read (sock_desc, buffer, BUFFER_SIZE) > 0))
-        write (fileno (file), buffer, s);
+    while ((s = read (sock_desc, buffer, BUFFER_SIZE)) > 0)
+    {
+        if (write (fileno (file), buffer, s) <= 0)
+            error ("Could not write to file\n");
+    }
 
     close (sock_desc);
     fclose (file);
