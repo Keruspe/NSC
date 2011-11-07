@@ -2,7 +2,6 @@
 #define __UTIL_H__
 
 #define BUFFER_SIZE 1024
-#define END_OF_FILE "___END_OF_FILE___"
 
 #include <netdb.h>
 #include <stdarg.h>

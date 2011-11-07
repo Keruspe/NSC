@@ -47,11 +47,6 @@ main (int argc, char *argv[])
              error ("error: couldn't write to server");
     }
 
-    if (write (sock_desc, END_OF_FILE, sizeof (END_OF_FILE)) <= 0)
-         error ("error: couldn't write to server");
-    else
-        printf ("Sent.\n");
-
     printf ("Recieving.\n");
     if (read (sock_desc, buffer, BUFFER_SIZE) <= 0)
         error ("Failed to receive filename");
