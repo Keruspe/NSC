@@ -11,6 +11,22 @@
 int sock_desc;
 
 static void *
+convert_thread (void *data)
+{
+    char **cmd = (char **) data;
+    execv ("ffmpeg", cmd);
+    return NULL;
+}
+
+static void
+exec_bg (char **cmd)
+{
+    pthread_t thread;
+    pthread_create (&thread, NULL, convert_thread, cmd);
+    pthread_join (thread, NULL);
+}
+
+static void *
 answer (void *data)
 {
     char buffer[BUFFER_SIZE + 1];
@@ -30,40 +46,40 @@ answer (void *data)
         goto out;
     }
 
-    while ((read (sock, buffer, BUFFER_SIZE) > 0)
-            && (strcmp(END_OF_FILE, buffer) != 0))
-        fprintf (file, "%s", buffer);
+    ssize_t s;
+    while (((s = read (sock, buffer, BUFFER_SIZE)) > 0)
+            && (strncmp(END_OF_FILE, buffer, s) != 0))
+        write (fileno(file), buffer, s);
 
-    strcpy (filename + strlen (filename) - 3, "ogg");
-    char *output_file = (char *) malloc ((strlen (filename) + 6) * sizeof (char));
-    sprintf (output_file, "/tmp/%s", filename);
-    /*
-     * TODO: ffmpeg -i input_file output_file
-     * new thread + wait ?
-     * remove the 4 following lines
-     */
-    FILE *tmp = fopen (output_file, "w");
-    file = freopen (input_file, "r", file);
-    while (fgets (buffer, BUFFER_SIZE, file) && fprintf (tmp, "%s", buffer));
-    fclose (tmp);
+    char *output_file = strdup (input_file);
+    strcpy (output_file + strlen (output_file) - 3, "mp3");
+    char **cmd = (char **) malloc (5 * sizeof (char *));
+    cmd[0] = "ffmpeg";
+    cmd[1] = "-i";
+    cmd[2] = input_file;
+    cmd[3] = output_file;
+    cmd[4] = NULL;
+    exec_bg (cmd);
+    free (cmd);
 
-    file = freopen (output_file, "r", file);
+    fclose (file);
+    file = fopen (output_file, "r");
     if (!file)
     {
         fprintf (stderr, "couldn't reopen file for read\n");
-        goto fail;
+        goto err;
     }
 
     if ((write (sock, filename, BUFFER_SIZE)) < 0)
          error ("error: couldn't write to client");
-    while (fgets (buffer, BUFFER_SIZE, file))
+    while ((s = read (fileno (file), buffer, BUFFER_SIZE)))
     {
-        if ((write (sock, buffer, BUFFER_SIZE)) < 0)
+        if ((write (sock, buffer, s)) < 0)
              error ("error: couldn't write to client");
     }
     fclose (file);
 
-fail:
+err:
     free (output_file);
 out:
     free (input_file);
