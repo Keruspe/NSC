@@ -2,33 +2,19 @@
 
 #include <pthread.h>
 #include <signal.h>
-#include <stdbool.h>
 #include <string.h>
-
-/*
- * TODO: free memory on error, support files with extension other than mp3 (strlen (extension) != 3)
- */
+#include <sys/wait.h>
 
 int sock_desc;
-
-static void *
-convert_thread (void *data)
-{
-    char **cmd = (char **) data;
-    execv ("/usr/bin/ffmpeg", cmd);
-    return NULL;
-}
 
 static void
 exec_bg (char **cmd)
 {
-    //pthread_t thread;
-    //pthread_create (&thread, NULL, convert_thread, cmd);
-    //pthread_join (thread, NULL);
     pid_t pid;
     if (!(pid = fork ()))
-        convert_thread (cmd);
-    else waitpid (pid, NULL, 0);
+        execv ("/usr/bin/ffmpeg", cmd);
+    else
+        waitpid (pid, NULL, 0);
 }
 
 static void *
@@ -62,12 +48,13 @@ answer (void *data)
 
     char *output_file = strdup (input_file);
     strcpy (output_file + strlen (output_file) - 3, "ogg");
-    char **cmd = (char **) malloc (5 * sizeof (char *));
+    char **cmd = (char **) malloc (6 * sizeof (char *));
     cmd[0] = "ffmpeg";
     cmd[1] = "-i";
     cmd[2] = input_file;
     cmd[3] = output_file;
-    cmd[4] = NULL;
+    cmd[4] = "-vn";
+    cmd[5] = NULL;
     exec_bg (cmd);
     free (cmd);
 
