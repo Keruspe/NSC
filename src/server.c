@@ -15,7 +15,7 @@ static void *
 convert_thread (void *data)
 {
     char **cmd = (char **) data;
-    execv ("ffmpeg", cmd);
+    execv ("/usr/bin/ffmpeg", cmd);
     return NULL;
 }
 
@@ -57,7 +57,7 @@ answer (void *data)
     }
 
     char *output_file = strdup (input_file);
-    strcpy (output_file + strlen (output_file) - 3, "mp3");
+    strcpy (output_file + strlen (output_file) - 3, "ogg");
     char **cmd = (char **) malloc (5 * sizeof (char *));
     cmd[0] = "ffmpeg";
     cmd[1] = "-i";
@@ -74,7 +74,7 @@ answer (void *data)
         goto err;
     }
 
-    strcpy (filename + strlen (filename) - 3, "mp3");
+    strcpy (filename + strlen (filename) - 3, "ogg");
     if ((write (sock, filename, BUFFER_SIZE)) <= 0)
          error ("error: couldn't write to client");
     while ((s = read (fileno (file), buffer, BUFFER_SIZE)) > 0)
