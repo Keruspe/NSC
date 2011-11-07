@@ -2,6 +2,7 @@
 
 #include <pthread.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <string.h>
 
 /*
@@ -47,9 +48,17 @@ answer (void *data)
     }
 
     ssize_t s;
-    while (((s = read (sock, buffer, BUFFER_SIZE)) > 0)
-            && (strncmp(END_OF_FILE, buffer, s) != 0))
+    size_t eof_size = strlen (END_OF_FILE);
+    bool go_out = false;
+    while (!go_out && ((s = read (sock, buffer, BUFFER_SIZE)) > 0))
     {
+        buffer[s] = '\0';
+        if (strcmp(END_OF_FILE, buffer + s - 1 - eof_size) == 0)
+        {
+            s -= eof_size;
+            go_out = true;
+            break;
+        }
         if (write (fileno(file), buffer, s) <= 0)
             error ("failed to write to client");
     }

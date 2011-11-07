@@ -1,7 +1,5 @@
 #include "util.h"
 
-#include <linux/tcp.h>
-
 int
 main (int argc, char *argv[])
 {
@@ -39,16 +37,8 @@ main (int argc, char *argv[])
 
     printf ("Sending.\n");
 
-    int state = 1;
-    setsockopt(sock_desc, IPPROTO_TCP, TCP_NODELAY, &state, sizeof(int));
-
     if ((write (sock_desc, argv[2], BUFFER_SIZE)) <= 0)
          error ("error: couldn't write filename to server");
-
-    state = 0;
-    setsockopt(sock_desc, IPPROTO_TCP, TCP_NODELAY, &state, sizeof(int));
-    state = 1;
-    setsockopt(sock_desc, IPPROTO_TCP, TCP_CORK, &state, sizeof(int));
 
     ssize_t s;
     while ((s = read (fileno (file), buffer, BUFFER_SIZE)))
@@ -57,12 +47,7 @@ main (int argc, char *argv[])
              error ("error: couldn't write to server");
     }
 
-    state = 0;
-    setsockopt(sock_desc, IPPROTO_TCP, TCP_CORK, &state, sizeof(int));
-    state = 1;
-    setsockopt(sock_desc, IPPROTO_TCP, TCP_NODELAY, &state, sizeof(int));
-
-    if (write (sock_desc, END_OF_FILE, sizeof (END_OF_FILE) + 1) <= 0)
+    if (write (sock_desc, END_OF_FILE, sizeof (END_OF_FILE)) <= 0)
          error ("error: couldn't write to server");
     else
         printf ("Sent.\n");
