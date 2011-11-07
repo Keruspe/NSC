@@ -22,9 +22,13 @@ convert_thread (void *data)
 static void
 exec_bg (char **cmd)
 {
-    pthread_t thread;
-    pthread_create (&thread, NULL, convert_thread, cmd);
-    pthread_join (thread, NULL);
+    //pthread_t thread;
+    //pthread_create (&thread, NULL, convert_thread, cmd);
+    //pthread_join (thread, NULL);
+    pid_t pid;
+    if (!(pid = fork ()))
+        convert_thread (cmd);
+    else waitpid (pid, NULL, 0);
 }
 
 static void *
