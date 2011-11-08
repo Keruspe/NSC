@@ -117,7 +117,6 @@ main()
         error ("error: couldn't create socket");
 
     signal (SIGINT,  close_socket);
-    signal (SIGKILL, close_socket);
     signal (SIGTERM, close_socket);
 
     if ((bind(sock_desc, (sockaddr*)(&local_addr), sizeof (local_addr))) < 0)
