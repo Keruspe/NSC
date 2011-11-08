@@ -7,6 +7,22 @@
 
 int sock_desc;
 
+struct _thread {
+    pthread_t tid;
+    struct _thread *next;
+};
+
+struct _thread *tlist = NULL;
+
+static void
+thread_list_prepend (pthread_t tid)
+{
+    struct _thread *t = (struct _thread *) malloc (sizeof (struct _thread));
+    t->tid = tid;
+    t->next = tlist;
+    tlist = t;
+}
+
 static void
 exec_bg (char **cmd)
 {
@@ -88,6 +104,13 @@ static void
 close_socket (int signal)
 {
     printf ("Signal %d received\n", signal);
+    while (tlist)
+    {
+        pthread_join (tlist->tid, NULL);
+        struct _thread *next = tlist->next;
+        free (tlist);
+        tlist = next;
+    }
     close (sock_desc);
     exit (0);
 }
@@ -134,8 +157,10 @@ main()
 
         pthread_t thread;
         pthread_create (&thread, NULL, answer, &new_sock_desc);
+        thread_list_prepend (thread);
     }
 
+    /* We never get here, though */
     close (sock_desc);
     return 0;
 }
