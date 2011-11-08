@@ -5,6 +5,7 @@
 
 #include <netdb.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,6 @@ typedef struct sockaddr_in sockaddr_in;
 typedef struct hostent hostent;
 typedef struct servent servent;
 
-void error (const char *format, ...) __attribute__((format(printf, 1, 2)));
+void error (bool fatal, const char *format, ...) __attribute__((format(printf, 2, 3)));
 
 #endif /*__UTIL_H__*/
